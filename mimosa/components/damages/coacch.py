@@ -10,6 +10,7 @@ from mimosa.common import (
     Var,
     GeneralConstraint,
     RegionalConstraint,
+    GlobalConstraint,
     value,
     soft_max,
     Any,
@@ -60,7 +61,50 @@ def get_constraints(m: AbstractModel) -> Sequence[GeneralConstraint]:
     # Get constraints for sea-level rise damages
     constraints.extend(_get_constraints_slr(m))
 
+    #### Mortality from heat stress
+    m.mortality_oldest = Var(m.t, m.regions)
+    m.mortality_older = Var(m.t, m.regions)
+    m.mortality_young = Var(m.t, m.regions)
+    m.mortality_param_oldest_a = Param(m.regions, doc="regional::mortality.oldest_a")
+    m.mortality_param_oldest_b = Param(m.regions, doc="regional::mortality.oldest_b")
+    m.mortality_param_oldest_c = Param(m.regions, doc="regional::mortality.oldest_c")
+    m.mortality_param_older_a = Param(m.regions, doc="regional::mortality.older_a")
+    m.mortality_param_older_b = Param(m.regions, doc="regional::mortality.older_b")
+    m.mortality_param_older_c = Param(m.regions, doc="regional::mortality.older_c")
+    m.mortality_param_young_a = Param(m.regions, doc="regional::mortality.young_a")
+    m.mortality_param_young_b = Param(m.regions, doc="regional::mortality.young_b")
+    m.mortality_param_young_c = Param(m.regions, doc="regional::mortality.young_c")
+ 
+    constraints.extend(
+        [
+            RegionalConstraint(
+                lambda m, t, r: m.mortality_oldest[t, r] ==  m.mortality_param_oldest_a[r] +  m.mortality_param_oldest_b[r] * m.temperature[t] + m.mortality_param_oldest_c[r] * m.temperature[t]**2
+            ),
+            RegionalConstraint(
+                lambda m, t, r: m.mortality_older[t, r] ==  m.mortality_param_older_a[r] +  m.mortality_param_older_b[r] * m.temperature[t] + m.mortality_param_older_c[r] * m.temperature[t]**2
+            ),
+            RegionalConstraint(
+                lambda m, t, r: m.mortality_young[t, r] ==  m.mortality_param_young_a[r] +  m.mortality_param_young_b[r] * m.temperature[t] + m.mortality_param_young_c[r] * m.temperature[t]**2
+            )
+        ]
+    )
+
+
+
+    m.mortality_cost_oldest = Var(m.t, m.regions)
+    m.statistical_value_life_oldest = Param(initialize=1.3e6/1e6)
+    constraints.extend(
+        [
+            RegionalConstraint(
+                lambda m, t, r: m.mortality_cost_oldest[t, r] == m.mortality_oldest[t, r] * m.population[t,r] * 1e4 *  m.statistical_value_life_oldest
+            )
+        ]
+    )
+
+
+
     return constraints
+
 
 
 def _get_constraints_temperature_dependent(

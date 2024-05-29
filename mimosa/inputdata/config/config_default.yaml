@@ -451,6 +451,9 @@ regional_parameter_files:
     COACCH:
       filename: inputdata/regionalparams/COACCH.csv
       regionstype: COACCH
+    mortality:
+      filename: inputdata/regionalparams/mortality.csv
+      regionstype: IMAGE26
 
 ##################
 
